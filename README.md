@@ -65,7 +65,7 @@ The application follows a distributed architecture to handle high-latency networ
 
 ### 1. Clone the Repo
 ```bash
-git clone [https://github.com/gokuls2253/iot-ghost-hunter.git](https://github.com/gokuls2253/iot-ghost-hunter.git)
+git clone [https://github.com/gokuls2253/iot-ghost-hunter.git]
 cd iot-ghost-hunter
 ```
 
