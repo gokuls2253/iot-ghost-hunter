@@ -1,0 +1,23 @@
+# .gitignore
+# Python artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environment variables (NEVER COMMIT THESE)
+.env
+
+# Virtual Environment
+venv/
+env/
+
+# Database (if using local sqlite, though we used postgres, good practice)
+db.sqlite3
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
+
+# OS specific
+.DS_Store
+Thumbs.db

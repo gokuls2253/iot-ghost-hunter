@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IoT Ghost Hunter</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        body { background-color: #121212; color: #e0e0e0; }
+        .card { background-color: #1e1e1e; border: 1px solid #333; margin-bottom: 20px; }
+        .table { color: #e0e0e0; }
+        .table-hover tbody tr:hover { color: #fff; background-color: #2c2c2c; }
+        .status-dot { height: 10px; width: 10px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+        .status-online { background-color: #00ff00; box-shadow: 0 0 8px #00ff00; }
+        .status-offline { background-color: #555; }
+        .navbar { box-shadow: 0 2px 10px rgba(0,0,0,0.5); }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-dark bg-dark border-bottom border-secondary mb-4">
+        <div class="container-fluid">
+            <span class="navbar-brand mb-0 h1">👻 IoT Ghost Hunter</span>
+            <span class="badge bg-success" id="connectionStatus">System Status: CONNECTED</span>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card p-4">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h2 class="display-4 fw-bold" id="activeCount">{{ active_devices }}</h2>
+                            <p class="text-muted mb-0">Online Devices</p>
+                        </div>
+                        <div class="fs-1">📶</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card p-3">
+                    <h5 class="card-title">Network Activity (Live)</h5>
+                    <div style="height: 150px;">
+                        <canvas id="trafficChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header bg-transparent border-secondary d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Network Inventory</h5>
+                <small class="text-muted">Auto-updates via WebSockets</small>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-hover mb-0">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Status</th>
+                            <th>IP Address</th>
+                            <th>MAC Address</th>
+                            <th>Vendor</th>
+                            <th>Last Seen</th>
+                        </tr>
+                    </thead>
+                    <tbody id="deviceTableBody">
+                        {% for device in devices %}
+                        <tr>
+                            <td>
+                                {% if device.is_active %}
+                                    <span class="status-dot status-online"></span> <span class="text-success">Online</span>
+                                {% else %}
+                                    <span class="status-dot status-offline"></span> <span class="text-muted">Offline</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ device.ip_address }}</td>
+                            <td class="font-monospace text-warning">{{ device.mac_address }}</td>
+                            <td>{{ device.vendor|default:"Unknown" }}</td>
+                            <td>{{ device.last_seen|timesince }} ago</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center py-4">No devices found yet. Run a scan!</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // === 1. CHART SETUP ===
+        const ctx = document.getElementById('trafficChart').getContext('2d');
+        
+        // Load initial data from Django context
+        const initialLabels = JSON.parse('{{ chart_labels|safe }}');
+        const initialData = JSON.parse('{{ chart_data|safe }}');
+
+        const trafficChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: initialLabels,
+                datasets: [{
+                    label: 'Active Devices',
+                    data: initialData,
+                    borderColor: '#0d6efd',
+                    backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                    borderWidth: 2,
+                    tension: 0.4, // Smooth curve
+                    fill: true,
+                    pointRadius: 3
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { 
+                        beginAtZero: true, 
+                        grid: { color: '#333' },
+                        ticks: { color: '#888' }
+                    },
+                    x: { 
+                        grid: { display: false },
+                        ticks: { display: false } // Hide time labels to keep it clean
+                    }
+                },
+                plugins: { legend: { display: false } }
+            }
+        });
+
+        // === 2. WEBSOCKET CONNECTION ===
+        // Connect to the Channel created in routing.py
+        const socket = new WebSocket('ws://' + window.location.host + '/ws/dashboard/');
+
+        socket.onopen = function(e) {
+            console.log("WebSocket: Connected");
+            document.getElementById('connectionStatus').className = 'badge bg-success';
+            document.getElementById('connectionStatus').innerText = 'System Status: REAL-TIME';
+        };
+
+        socket.onmessage = function(e) {
+            const data = JSON.parse(e.data);
+            console.log("WebSocket: Message Recieved", data);
+
+            if (data.message) {
+                const count = data.message.count;
+                const isAnomaly = data.message.is_anomaly;
+
+                // --- A. Update Counter ---
+                const countElement = document.getElementById('activeCount');
+                countElement.innerText = count;
+
+                // --- B. Handle Anomaly UI ---
+                const navBar = document.querySelector('.navbar');
+                const statusBadge = document.getElementById('connectionStatus');
+
+                if (isAnomaly) {
+                    // Turn UI Red
+                    navBar.classList.remove('bg-dark');
+                    navBar.classList.add('bg-danger');
+                    statusBadge.innerText = '⚠️ SECURITY ALERT: ANOMALY DETECTED';
+                    statusBadge.className = 'badge bg-warning text-dark';
+                    
+                    // Optional: Play a sound or shake the screen
+                    countElement.style.color = '#ff0000';
+                } else {
+                    // Reset to Normal
+                    navBar.classList.add('bg-dark');
+                    navBar.classList.remove('bg-danger');
+                    statusBadge.innerText = 'System Status: REAL-TIME';
+                    statusBadge.className = 'badge bg-success';
+                    countElement.style.color = '#e0e0e0';
+                }
+
+                // --- C. Update Graph ---
+                const now = new Date();
+                const timeString = now.getHours() + ":" + now.getMinutes() + ":" + now.getSeconds();
+
+                trafficChart.data.labels.push(timeString);
+                trafficChart.data.datasets[0].data.push(count);
+
+                // Highlight the point in Red if anomaly
+                const pointColor = isAnomaly ? 'red' : '#0d6efd';
+                // (Chart.js advanced coloring requires updating the array of colors, 
+                // keeping it simple for now, the Navbar change is the big indicator).
+
+                if (trafficChart.data.labels.length > 10) {
+                    trafficChart.data.labels.shift();
+                    trafficChart.data.datasets[0].data.shift();
+                }
+                trafficChart.update('none');
+            }
+        };
+
+        socket.onclose = function(e) {
+            console.error("WebSocket: Closed");
+            document.getElementById('connectionStatus').className = 'badge bg-danger';
+            document.getElementById('connectionStatus').innerText = 'System Status: DISCONNECTED';
+        };
+    </script>
+</body>
+</html>
