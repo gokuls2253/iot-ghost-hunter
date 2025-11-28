@@ -137,13 +137,13 @@ The ML model requires about 10-20 "normal" scans to train. To see the Red Alert 
 
 ⚠️ Troubleshooting
 1. "Permission Denied" / Scapy Errors:
- * Ensure you are running your terminal as Administrator.
- * Ensure Npcap is installed in API-compatible mode.
+ ** Ensure you are running your terminal as Administrator.
+ ** Ensure Npcap is installed in API-compatible mode.
 2. Graph not updating:
- * Check the browser console (F12) for WebSocket connection errors.
- * Ensure daphne is at the top of INSTALLED_APPS in settings.py.
+ ** Check the browser console (F12) for WebSocket connection errors.
+ ** Ensure daphne is at the top of INSTALLED_APPS in settings.py.
 3. Celery "Spawn" Error (Windows):
- * Make sure you are using --pool=solo when starting the worker.
+ ** Make sure you are using --pool=solo when starting the worker.
 
 📄 License
 This project is open-source and available under the MIT License.
