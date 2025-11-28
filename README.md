@@ -14,7 +14,8 @@
 Unlike standard scanners that block the web interface while scanning, this project uses an **Event-Driven Architecture**. It offloads network scanning to background workers (Celery), streams data via an in-memory message broker (Redis), and pushes updates to the frontend instantly over WebSockets (Django Channels).
 
 ### 📸 Dashboard Preview
-![Dashboard Screenshot](https://via.placeholder.com/800x400?text=Dashboard+Screenshot+Placeholder)
+![Dashboard Screenshot]([https://github.com/user-attachments/assets/5c55ac54-2e4f-4f16-a992-001c724e6866])
+
 
 ---
 
