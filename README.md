@@ -87,15 +87,20 @@ pip install -r requirements.txt
 ### 3. Configuration
 Create a .env file in the root directory:
 ```
+# .env
 DEBUG=True
 SECRET_KEY=your_secret_key_here
+# Database (Simple Setup)
 DB_NAME=ghost_hunter
 DB_USER=postgres
 DB_PASSWORD=your_db_password
 DB_HOST=localhost
 DB_PORT=5432
+# Redis (Defaults are usually fine for local)
 REDIS_HOST=localhost
 REDIS_PORT=6379
+#VirusTotal API Key
+VT_API_KEY=your_api_key
 ```
 
 ### 4. Database Initialization
