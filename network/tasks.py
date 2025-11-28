@@ -6,6 +6,7 @@ from .models import Device, ScanLog
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 from .ml_engine import GhostBrain
+from mac_vendor_lookup import MacLookup, VendorNotFoundError
 
 def get_local_subnet():
     """
@@ -31,7 +32,12 @@ def scan_network():
     """
     target_ip = get_local_subnet()
     print(f"[*] Starting ARP scan on {target_ip}...")
-
+    # update=True checks for a newer OUI list from the web on first run
+    try:
+        mac_lookup = MacLookup()
+    except Exception as e:
+        print(f"Warning: Could not init MacParser: {e}")
+        mac_parser = None
     # 1. Create ARP Request
     # Ether(dst="ff:...") = Broadcast to everyone
     # ARP(pdst=target_ip) = "Who has these IPs?"
@@ -50,25 +56,52 @@ def scan_network():
     for sent, received in result:
         # received.psrc = Source IP
         # received.hwsrc = Source MAC Address
-        device_info = {'ip': received.psrc, 'mac': received.hwsrc}
+        try:
+            ip_address = received.psrc
+            mac_address = received.hwsrc.upper()
+        except AttributeError:
+            # Skip malformed packets
+            continue
+        # NEW: Lookup Vendor ===
+        vendor_name = "Unknown"
+        # Check for Private/Randomized MAC Address
+        # If the second character is 2, 6, A, or E, it's a private address.
+        second_char = mac_address[1]
+        if second_char in ['2', '6', 'A', 'E']:
+            vendor_name = "Private/Randomized Device"
+        # If not private, try looking it up
+        if mac_lookup:
+            try:
+                vendor_name = mac_lookup.lookup(mac_address)
+            except VendorNotFoundError:
+                vendor_name = "Unknown Vendor"
+            except Exception:
+                vendor_name = "Lookup Failed"
+                
+        device_info = {
+            'ip': ip_address, 
+            'mac': mac_address,
+            'vendor': vendor_name
+        }
         active_devices.append(device_info)
         
         # 4. Update Database
         # update_or_create checks if MAC exists. 
         # If yes, updates IP/Time. If no, creates new row.
-        obj, created = Device.objects.update_or_create(
+        Device.objects.update_or_create(
             mac_address=device_info['mac'],
             defaults={
                 'ip_address': device_info['ip'],
                 'last_seen': timezone.now(),
-                'is_active': True
+                'is_active': True,
+                'vendor': device_info['vendor']
             }
         )
     
-    # 5. Mark missing devices as inactive
-    # (Optional logic: if a device wasn't in this scan, set is_active=False)
-    current_macs = [d['mac'] for d in active_devices]
-    Device.objects.exclude(mac_address__in=current_macs).update(is_active=False)
+    # # 5. Mark missing devices as inactive
+    # # (Optional logic: if a device wasn't in this scan, set is_active=False)
+    # current_macs = [d['mac'] for d in active_devices]
+    # Device.objects.exclude(mac_address__in=current_macs).update(is_active=False)
 
     # 6. Log the scan
     ScanLog.objects.create(devices_online=len(active_devices))
@@ -80,7 +113,7 @@ def scan_network():
     status_msg = "Scan Complete"
     if is_anomaly:
         status_msg = "⚠️ ANOMALY DETECTED ⚠️"
-        print(f"!!! GHOST HUNTER ALERT: {len(active_devices)} devices is unusual! !!!")
+        # print(f"!!! GHOST HUNTER ALERT: {len(active_devices)} devices is unusual! !!!")
 
     # === Broadcast to WebSocket ===
     channel_layer = get_channel_layer()
@@ -97,4 +130,4 @@ def scan_network():
         }
     )
 
-    return f"Scan Complete. Found {len(active_devices)} devices. Anomaly: {is_anomaly}"
+    return f"Scan Complete. Found {len(active_devices)} devices."

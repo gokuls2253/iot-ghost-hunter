@@ -8,8 +8,8 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
     <style>
-        body { background-color: #121212; color: #e0e0e0; }
-        .card { background-color: #1e1e1e; border: 1px solid #333; margin-bottom: 20px; }
+        body { background-color: #fcf9f9ff; color: #e0e0e0; }
+        .card { background-color: #ffffffff; border: 1px solid #776f6fff; margin-bottom: 20px; }
         .table { color: #e0e0e0; }
         .table-hover tbody tr:hover { color: #fff; background-color: #2c2c2c; }
         .status-dot { height: 10px; width: 10px; border-radius: 50%; display: inline-block; margin-right: 5px; }
@@ -150,6 +150,7 @@
             if (data.message) {
                 const count = data.message.count;
                 const isAnomaly = data.message.is_anomaly;
+                const devices = data.message.devices;
 
                 // --- A. Update Counter ---
                 const countElement = document.getElementById('activeCount');
@@ -177,7 +178,33 @@
                     countElement.style.color = '#e0e0e0';
                 }
 
-                // --- C. Update Graph ---
+                // --- C. RE-BUILD THE TABLE (The Fix) ---
+                const tableBody = document.getElementById('deviceTableBody');
+                tableBody.innerHTML = ''; // Clear current rows
+
+                // Loop through the new device list and create rows
+                devices.forEach(device => {
+                    // Create a new table row
+                    const row = document.createElement('tr');
+                    
+                    // Handle "Unknown" vs "Real" Vendor for styling
+                    const vendorDisplay = device.vendor || "Unknown";
+                    
+                    row.innerHTML = `
+                        <td>
+                            <span class="status-dot status-online"></span> 
+                            <span class="text-success">Online</span>
+                        </td>
+                        <td>${device.ip}</td>
+                        <td class="font-monospace text-warning">${device.mac}</td>
+                        <td>${vendorDisplay}</td>
+                        <td>Just now</td>
+                    `;
+                    
+                    tableBody.appendChild(row);
+                });
+                
+                // --- D. Update Graph ---
                 const now = new Date();
                 const timeString = now.getHours() + ":" + now.getMinutes() + ":" + now.getSeconds();
 
