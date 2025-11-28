@@ -1,12 +1,14 @@
 from celery import shared_task
-from scapy.all import ARP, Ether, srp
+from scapy.all import ARP, Ether, srp, sniff, IP, TCP
 import socket
+import random
 from django.utils import timezone
 from .models import Device, ScanLog
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 from .ml_engine import GhostBrain
 from mac_vendor_lookup import MacLookup, VendorNotFoundError
+from .threat_engine import ThreatHunter
 
 def get_local_subnet():
     """
@@ -36,8 +38,7 @@ def scan_network():
     try:
         mac_lookup = MacLookup()
     except Exception as e:
-        print(f"Warning: Could not init MacParser: {e}")
-        mac_parser = None
+        mac_lookup = None
     # 1. Create ARP Request
     # Ether(dst="ff:...") = Broadcast to everyone
     # ARP(pdst=target_ip) = "Who has these IPs?"
@@ -70,13 +71,11 @@ def scan_network():
         if second_char in ['2', '6', 'A', 'E']:
             vendor_name = "Private/Randomized Device"
         # If not private, try looking it up
-        if mac_lookup:
+        elif mac_lookup:
             try:
                 vendor_name = mac_lookup.lookup(mac_address)
-            except VendorNotFoundError:
+            except:
                 vendor_name = "Unknown Vendor"
-            except Exception:
-                vendor_name = "Lookup Failed"
                 
         device_info = {
             'ip': ip_address, 
@@ -98,6 +97,34 @@ def scan_network():
             }
         )
     
+    # [PART 2: PASSIVE SNIFFER - NEW CODE]
+    print("[*] Sampling traffic for 5 seconds...")
+    captured_packets = sniff(count=50, timeout=5, filter="tcp")
+    
+    foreign_ips = set()
+    hunter = ThreatHunter()
+
+    for pkt in captured_packets:
+        if IP in pkt:
+            dst_ip = pkt[IP].dst
+            if hunter.is_public_ip(dst_ip):
+                foreign_ips.add(dst_ip)
+    
+    # [PART 3: THREAT CHECK]
+    threat_alert = None
+    if foreign_ips:
+        # Pick 1 random IP to check (Rate Limit Protection)
+        suspect_ip = random.choice(list(foreign_ips))
+        is_malicious, score = hunter.check_ip(suspect_ip)
+        
+        if is_malicious:
+            threat_alert = {
+                "ip": suspect_ip,
+                "score": score,
+                "msg": f"CRITICAL: Connection to malicious IP {suspect_ip} detected!"
+            }
+            print(f"!!! {threat_alert['msg']} !!!")
+
     # # 5. Mark missing devices as inactive
     # # (Optional logic: if a device wasn't in this scan, set is_active=False)
     # current_macs = [d['mac'] for d in active_devices]
@@ -111,7 +138,9 @@ def scan_network():
     is_anomaly = bool(brain.check_anomaly(len(active_devices)))
     
     status_msg = "Scan Complete"
-    if is_anomaly:
+    if threat_alert:
+        status_msg = "⛔ THREAT DETECTED ⛔"
+    elif is_anomaly:
         status_msg = "⚠️ ANOMALY DETECTED ⚠️"
         # print(f"!!! GHOST HUNTER ALERT: {len(active_devices)} devices is unusual! !!!")
 
@@ -124,10 +153,11 @@ def scan_network():
             "message": {
                 "status": status_msg,
                 "is_anomaly": is_anomaly, # <--- Send the flag
+                "threat_data": threat_alert, # <--- Send Threat Data
                 "count": len(active_devices),
                 "devices": active_devices
             }
         }
     )
 
-    return f"Scan Complete. Found {len(active_devices)} devices."
+    return f"Scan Complete. Devices: {len(active_devices)}. Threat: {threat_alert}"
