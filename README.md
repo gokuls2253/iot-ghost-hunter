@@ -1,42 +1,42 @@
 # 👻 IoT Ghost Hunter
 
-> **Enterprise-Grade Network Anomaly Detection System**
-> *Built with Django, Scapy, Celery, Redis, and Scikit-Learn.*
+> **Enterprise-Grade Network Operations (NetOps) Console**
+> *Real-time Network Monitoring, Anomaly Detection, and Threat Intelligence System.*
 
-![Project Status](https://img.shields.io/badge/Status-Active-success)
-![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
-![Django](https://img.shields.io/badge/Django-5.0-green)
-![Redis](https://img.shields.io/badge/Redis-Event%20Broker-red)
+![Project Status](https://img.shields.io/badge/Status-Active-success?style=for-the-badge&logo=statuspage)
+![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![Django](https://img.shields.io/badge/Django-5.0-092E20?style=for-the-badge&logo=django&logoColor=white)
+![Redis](https://img.shields.io/badge/Redis-Broker-DC382D?style=for-the-badge&logo=redis&logoColor=white)
 
 ## 📖 Overview
-**IoT Ghost Hunter** is a real-time network monitoring dashboard designed to identify devices on a local network and detect anomalous behavior using Machine Learning.
+**IoT Ghost Hunter** is a sophisticated, event-driven network analysis tool designed to visualize local network traffic and detect security threats in real-time.
 
-Unlike standard scanners that block the web interface while scanning, this project uses an **Event-Driven Architecture**. It offloads network scanning to background workers (Celery), streams data via an in-memory message broker (Redis), and pushes updates to the frontend instantly over WebSockets (Django Channels).
-
-### 📸 Dashboard Preview
-![Dashboard Screenshot]([https://github.com/user-attachments/assets/5c55ac54-2e4f-4f16-a992-001c724e6866])
-
+Unlike traditional scanners, this system uses an asynchronous architecture to perform **Passive Packet Sniffing** and **Active ARP Discovery** simultaneously without blocking the user interface. It integrates Machine Learning for anomaly detection and external Threat Intelligence APIs to flag connections to malicious global endpoints.
 
 ---
 
 ## ✨ Key Features
-* **🕵️ Real-Time Discovery:** Scans the local network (ARP) to identify active devices (IP, MAC, Vendor).
-* **⚡ Asynchronous Engine:** Uses **Celery** to perform heavy network operations without freezing the UI.
-* **📡 Live Updates:** Pushes scan results to the browser instantly via **WebSockets** (no page refresh required).
-* **🧠 Anomaly Detection:** Integrated **Isolation Forest (ML)** algorithm that learns "normal" network patterns and alerts on suspicious spikes in device activity.
-* **📊 Dynamic Visualization:** Interactive time-series traffic graph using **Chart.js**.
+
+### 🛡️ Core Security
+* **Real-Time Discovery:** Instantly identifies devices (IP, MAC, Vendor) entering the network using ARP broadcasting.
+* **🧠 Anomaly Detection:** Uses **Scikit-Learn (Isolation Forest)** to learn baseline network behavior and alert on suspicious device spikes.
+* **⛔ Threat Intelligence:** Integrates with **VirusTotal API** to check destination IPs against a global malware database.
+
+### 🗺️ Visualization & Ops
+* **🌍 Geo-Location Mapping:** traces outgoing traffic and visualizes destination servers on an interactive **Leaflet.js World Map**.
+* **🏭 Vendor Fingerprinting:** Automatically resolves MAC addresses to manufacturers (e.g., "Apple, Inc.", "Espressif") using `mac-vendor-lookup`.
+* **⚡ Live Streams:** Uses **WebSockets (Django Channels)** to push alerts and graph updates instantly—no page refreshes required.
 
 ---
 
 ## 🏗️ Architecture
 
-The application follows a distributed architecture to handle high-latency network operations:
+The system follows a distributed, microservices-style architecture:
 
-1.  **Network Layer (Scapy):** Performs ARP broadcasting to discover devices.
-2.  **Task Queue (Celery + Redis):** Manages asynchronous scanning tasks.
-3.  **Intelligence Layer (Scikit-Learn):** Analyzes historical data to flag anomalies.
-4.  **Real-Time Layer (Django Channels):** Pushes alerts to the browser via ASGI/WebSockets.
-5.  **Presentation (Bootstrap 5):** A dark-mode, responsive dashboard.
+1.  **Sensing Layer (Scapy):** A background worker captures raw packets and performs active scanning.
+2.  **Processing Layer (Celery):** Handles heavy lifting (ML prediction, API queries) asynchronously.
+3.  **Message Bus (Redis):** Acts as the high-speed bridge between the scanner and the web server.
+4.  **Presentation Layer (Django + Channels):** Serves the UI and manages WebSocket connections.
 
 ---
 
@@ -44,26 +44,26 @@ The application follows a distributed architecture to handle high-latency networ
 
 | Component | Technology | Purpose |
 | :--- | :--- | :--- |
-| **Backend** | Python, Django | Core application logic and API. |
-| **Network Engine** | Scapy | Raw packet manipulation and ARP scanning. |
-| **Async Processing** | Celery | Background task scheduling and execution. |
-| **Message Broker** | Redis | Communication between Django, Celery, and WebSockets. |
-| **Real-Time** | Django Channels (Daphne) | WebSocket protocol handling (ASGI). |
-| **ML Engine** | Scikit-Learn | Unsupervised Anomaly Detection (Isolation Forest). |
-| **Database** | PostgreSQL | Persistent storage for device logs and history. |
-| **Frontend** | Bootstrap 5, Chart.js | Responsive UI and Data Visualization. |
+| **Backend** | Python, Django | Core application logic and REST API. |
+| **Network Engine** | Scapy | Packet sniffing and ARP injection. |
+| **Async Tasks** | Celery | Distributed task queue management. |
+| **Broker** | Redis | In-memory data structure store. |
+| **Real-Time** | Django Channels (Daphne) | ASGI WebSocket handling. |
+| **ML Engine** | Scikit-Learn | Unsupervised Anomaly Detection. |
+| **External APIs** | VirusTotal, IP-API | Threat intelligence and Geo-coding. |
+| **Frontend** | Bootstrap 5, Chart.js, Leaflet | "Command Center" UI. |
 
 ---
 
 ## 🚀 Setup & Installation
 
 ### Prerequisites
-* Python 3.10+
-* PostgreSQL
-* Redis Server (Local or Docker)
-* **Windows Users:** Must install [Npcap](https://npcap.com/) (Ensure "Install Npcap in WinPcap API-compatible Mode" is checked).
+* **Python 3.10+**
+* **Redis Server** (Running locally or via Docker)
+* **PostgreSQL**
+* **Windows Users:** Must install [Npcap](https://npcap.com/) (Check "Install in WinPcap API-compatible Mode").
 
-### 1. Clone the Repo
+### 1. Clone the Repository
 ```bash
 git clone [https://github.com/gokuls2253/iot-ghost-hunter.git]
 cd iot-ghost-hunter
@@ -77,9 +77,6 @@ python -m venv venv
 # Activate (Windows)
 venv\Scripts\activate
 
-# Activate (Mac/Linux)
-source venv/bin/activate
-
 # Install Dependencies
 pip install -r requirements.txt
 ```
@@ -89,7 +86,7 @@ Create a .env file in the root directory:
 ```
 # .env
 DEBUG=True
-SECRET_KEY=your_secret_key_here
+SECRET_KEY=your_secret_key
 # Database (Simple Setup)
 DB_NAME=ghost_hunter
 DB_USER=postgres
@@ -99,13 +96,13 @@ DB_PORT=5432
 # Redis (Defaults are usually fine for local)
 REDIS_HOST=localhost
 REDIS_PORT=6379
-#VirusTotal API Key
+#Threat Intelligence (VirusTotal API Key)
 VT_API_KEY=your_api_key
 ```
 
 ### 4. Database Initialization
+Create the database in Postgres first, then run:
 ```
-# Create the database in Postgres first, then run:
 python manage.py migrate
 ```
 
@@ -122,7 +119,7 @@ Runs the scan automatically every 5 minutes.
 ```
 celery -A config beat -l info
 ```
-Terminal 3: Django Web Server (The UI)
+Terminal 3: Django Web Server (The Hoster)
 ```
 python manage.py runserver
 ```
@@ -138,18 +135,19 @@ python manage.py shell
 from network.tasks import scan_network
 scan_network.delay()
 ```
-Simulating an Anomaly
-The ML model requires about 10-20 "normal" scans to train. To see the Red Alert UI immediately, you can force the flag in network/tasks.py or connect multiple new devices to your network simultaneously.
+Simulating a Threat
+To see the Red Alert UI without actual malware:
+1. Open network/threat_engine.py.
+2. Uncomment the simulation line: return True, 99 inside check_ip().
+3. Restart the Celery Worker.
+4. Trigger a scan.
 
-⚠️ Troubleshooting
-1. "Permission Denied" / Scapy Errors:
-  - Ensure you are running your terminal as Administrator.
-  - Ensure Npcap is installed in API-compatible mode.
-2. Graph not updating:
-  - Check the browser console (F12) for WebSocket connection errors.
-  - Ensure daphne is at the top of INSTALLED_APPS in settings.py.
-3. Celery "Spawn" Error (Windows):
-  - Make sure you are using --pool=solo when starting the worker.
+## ⚠️ Troubleshooting
 
-📄 License
+- "Permission Denied" (Scapy): Ensure you are running the terminal as Administrator/Root. Raw packet capture requires elevated privileges.
+- Map not showing points: Ensure you have generated traffic (opened browser tabs) while the scanner is running so the passive sniffer captures packets.
+- Redis Connection Error: Ensure the Redis service is running (redis-server or via Docker).
+
+## 📄 License
+
 This project is open-source and available under the MIT License.
