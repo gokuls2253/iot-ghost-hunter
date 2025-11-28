@@ -7,166 +7,218 @@
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
     
     <style>
         :root {
-            --bg-dark: #121212;
-            --card-bg: #1e1e1e;
-            --text-main: #e0e0e0;
-            --text-muted: #a0a0a0;
-            --accent-green: #00ff00;
-            --accent-blue: #0d6efd;
-            --accent-red: #ff3333;
-            --border-color: #333;
+            --bg-dark: #0f1115;       /* Deepest background */
+            --panel-bg: #161b22;      /* GitHub-style dark panel */
+            --border-color: #30363d;  /* Subtle borders */
+            --accent-blue: #58a6ff;   /* Tech Blue */
+            --accent-green: #238636;  /* Success Green */
+            --accent-red: #da3633;    /* Danger Red */
+            --text-main: #c9d1d9;     /* Soft White */
+            --text-muted: #8b949e;    /* Muted Grey */
         }
 
         body { 
             background-color: var(--bg-dark); 
             color: var(--text-main); 
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            font-family: 'Segoe UI', 'Roboto', sans-serif;
+            overflow-x: hidden;
         }
 
-        /* Card Styling */
+        /* --- Panel Styling --- */
         .card { 
-            background-color: var(--card-bg); 
+            background-color: var(--panel-bg); 
             border: 1px solid var(--border-color); 
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
             margin-bottom: 20px; 
         }
-
-        /* Navbar Styling */
-        .navbar { 
-            background-color: #1a1a1a !important; 
+        .card-header {
+            background-color: rgba(255,255,255,0.02);
             border-bottom: 1px solid var(--border-color);
-            box-shadow: 0 2px 10px rgba(0,0,0,0.5); 
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-size: 0.8rem;
+            color: var(--text-muted);
         }
 
-        /* Status Dots */
+        /* --- Navbar --- */
+        .navbar { 
+            background-color: #161b22 !important; 
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        /* --- Status Indicators --- */
         .status-dot { 
-            height: 10px; width: 10px; 
+            height: 8px; width: 8px; 
             border-radius: 50%; 
             display: inline-block; 
             margin-right: 6px; 
         }
-        .status-online { background-color: var(--accent-green); box-shadow: 0 0 8px var(--accent-green); }
-        .status-offline { background-color: #555; }
+        .status-online { background-color: #3fb950; box-shadow: 0 0 6px #3fb950; }
+        .status-offline { background-color: #6e7681; }
 
-        /* Table Styling */
-        .table { color: var(--text-main); vertical-align: middle; }
-        .table-hover tbody tr:hover { background-color: #2c2c2c; color: #fff; }
-        .table-dark th { background-color: #111; border-bottom: 2px solid #444; color: #888; text-transform: uppercase; font-size: 0.85rem; letter-spacing: 1px; }
-        td { border-color: #333; }
-
-        /* Typography */
-        .tech-font { font-family: 'Consolas', 'Monaco', monospace; letter-spacing: -0.5px; }
-        .vendor-badge { font-weight: 500; font-size: 0.9rem; }
-        
-        /* Metric Count */
-        #activeCount { 
-            text-shadow: 0 0 10px rgba(0, 255, 0, 0.2);
-            transition: color 0.3s ease;
+        /* --- Data Typography --- */
+        .mono-font { font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; font-size: 0.9em; }
+        .vendor-badge { 
+            background-color: rgba(56, 139, 253, 0.1); 
+            color: #58a6ff; 
+            padding: 2px 6px; 
+            border-radius: 4px; 
+            font-size: 0.85em;
+            border: 1px solid rgba(56, 139, 253, 0.3);
         }
+        
+        /* --- Table Overrides --- */
+        .table { color: var(--text-main); margin-bottom: 0; }
+        .table-hover tbody tr:hover { background-color: rgba(255,255,255,0.04); color: #fff; }
+        .table th { 
+            background-color: transparent; 
+            border-bottom: 1px solid var(--border-color); 
+            color: var(--text-muted);
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+        .table td { border-bottom: 1px solid var(--border-color); vertical-align: middle; }
+
+        /* --- Map Styling --- */
+        .leaflet-container { background: #0d1117; }
     </style>
 </head>
 <body>
-    <nav class="navbar navbar-dark mb-4 p-3">
+    <nav class="navbar navbar-dark mb-4 px-3">
         <div class="container-fluid d-flex justify-content-between">
             <div class="d-flex align-items-center">
-                <span class="navbar-brand mb-0 h1 fw-bold">👻 IoT Ghost Hunter</span>
-                <span class="badge bg-secondary ms-2" style="font-size: 0.7rem;">v2.0</span>
+                <span class="navbar-brand mb-0 h1 fw-bold text-white">👻 IoT Ghost Hunter</span>
+                <span class="badge border border-secondary text-secondary ms-2 mono-font">v2.0</span>
             </div>
-            <span class="badge bg-success px-3 py-2" id="connectionStatus">System Status: ONLINE</span>
+            <div class="d-flex align-items-center">
+                <span class="badge bg-success bg-opacity-10 text-success border border-success" id="connectionStatus">System Status: ONLINE</span>
+                <spam class="text-muted mx-3">|</spam>
+                <span id="scanTimer" class="text-white small me-3 mono-font">Next Scan: IDLE</span>
+            </div>
         </div>
     </nav>
 
-    <div class="container">
+    <div class="container-fluid px-4">
+        
         <div class="row">
-            <div class="col-md-5">
-                <div class="card p-4 h-100 d-flex justify-content-center">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="text-uppercase text-white mb-1">Active Endpoints</h6>
-                            <h1 class="display-3 fw-bold text-success" id="activeCount">{{ active_devices }}</h1>
-                        </div>
-                        <div class="text-end">
-                            <div class="fs-1 text-white opacity-20">📡</div>
-                        </div>
-                    </div>
-                    <div class="progress mt-3" style="height: 5px; background-color: #333;">
-                        <div class="progress-bar bg-success" role="progressbar" style="width: 100%; box-shadow: 0 0 10px #00ff00;"></div>
+            <div class="col-lg-3 col-md-12">
+                <div class="card h-100">
+                    <div class="card-body d-flex flex-column justify-content-center align-items-center text-center">
+                        <h6 class="text-white text-uppercase mb-2">Active Hosts</h6>
+                        <h1 class="display-2 fw-bold text-success mb-0" id="activeCount">{{ active_devices }}</h1>
+                        <p class="text-white small mb-0 mt-2"><i class="status-dot status-online"></i>Live Count 📡</p>
                     </div>
                 </div>
             </div>
 
-            <div class="col-md-7">
-                <div class="card p-3 h-100">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <h6 class="text-uppercase text-white mb-0">Traffic Anomaly Monitor</h6>
-                        <small class="text-success"><span class="status-dot status-online"></span>Live</small>
+            <div class="col-lg-9 col-md-12">
+                <div class="card h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span class="text-uppercase text-white mb-0">Network Traffic Volume</span>
+                        <small class="mono-font text-success">LIVE FEED</small>
                     </div>
-                    <div style="height: 180px; width: 100%;">
-                        <canvas id="trafficChart"></canvas>
+                    <div class="card-body p-2">
+                        <div style="height: 200px; width: 100%;">
+                            <canvas id="trafficChart"></canvas>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="card mt-4">
-            <div class="card-header bg-transparent border-secondary d-flex justify-content-between align-items-center p-3">
-                <h5 class="mb-0 text-white">Network Inventory</h5>
-                <small class="text-muted fst-italic">Scanning local subnet...</small>
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span class="text-uppercase text-white mb-0"><i class="me-2">📋</i>Device Inventory</span>
+                        <span class="badge bg-secondary bg-opacity-25 text-white mono-font">ARP SCANNER</span>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 10%">State</th>
+                                        <th style="width: 20%">IP Address</th>
+                                        <th style="width: 25%">MAC Address</th>
+                                        <th style="width: 30%">Fingerprint (Vendor)</th>
+                                        <th style="width: 15%">Last Seen</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="deviceTableBody">
+                                    {% for device in devices %}
+                                    <tr class="animate__animated animate__fadeIn">
+                                        <td>
+                                            {% if device.is_active %}
+                                                <span class="badge bg-success bg-opacity-25 text-success border border-success px-2">UP</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary bg-opacity-25 text-muted px-2">DOWN</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="mono-font text-muted">{{ device.ip_address }}</td>
+                                        <td class="mono-font text-warning">{{ device.mac_address }}</td>
+                                        <td><span class="vendor-badge">{{ device.vendor|default:"Unknown" }}</span></td>
+                                        <td class="text-muted small">{{ device.last_seen|timesince }} ago</td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="5" class="text-center py-4 text-muted">
+                                            Waiting for data stream...
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover mb-0">
-                        <thead class="table-dark">
-                            <tr>
-                                <th style="width: 15%">Status</th>
-                                <th style="width: 20%">IP Address</th>
-                                <th style="width: 25%">MAC Address</th>
-                                <th style="width: 25%">Fingerprint (Vendor)</th>
-                                <th style="width: 15%">Last Seen</th>
-                            </tr>
-                        </thead>
-                        <tbody id="deviceTableBody">
-                            {% for device in devices %}
-                            <tr>
-                                <td>
-                                    {% if device.is_active %}
-                                        <span class="status-dot status-online"></span> <span class="text-success fw-bold" style="font-size: 0.9rem;">UP</span>
-                                    {% else %}
-                                        <span class="status-dot status-offline"></span> <span class="text-muted" style="font-size: 0.9rem;">DOWN</span>
-                                    {% endif %}
-                                </td>
-                                <td class="tech-font text-muted">{{ device.ip_address }}</td>
-                                <td class="tech-font text-warning">{{ device.mac_address }}</td>
-                                <td class="vendor-badge">{{ device.vendor|default:"Unknown" }}</td>
-                                <td class="text-muted small">{{ device.last_seen|timesince }} ago</td>
-                            </tr>
-                            {% empty %}
-                            <tr>
-                                <td colspan="5" class="text-center py-5 text-muted">
-                                    <div class="spinner-border spinner-border-sm text-secondary me-2" role="status"></div>
-                                    Waiting for initial scan...
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+        </div>
+
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span class="text-uppercase text-white mb-0"><i class="me-2">🌍</i>Global Threat Map</span>
+                        <small class="text-white">Passive Sniffing</small>
+                    </div>
+                    <div class="card-body p-0">
+                        <div id="worldMap" style="height: 400px; width: 100%; border-radius: 0 0 6px 6px;"></div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        // === 1. PREMIUM CHART SETUP ===
-        const ctx = document.getElementById('trafficChart').getContext('2d');
+        // === 1. MAP SETUP (Leaflet) ===
+        const map = L.map('worldMap', {
+            center: [30, 10], 
+            zoom: 2,
+            zoomControl: false,
+            attributionControl: false
+        });
         
-        // Create Gradient Fill
+        // CartoDB Dark Matter Tiles (The "Hacker Movie" Map Style)
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            maxZoom: 20
+        }).addTo(map);
+
+        let mapMarkers = [];
+
+        // === 2. CHART SETUP ===
+        const ctx = document.getElementById('trafficChart').getContext('2d');
         const gradient = ctx.createLinearGradient(0, 0, 0, 400);
-        gradient.addColorStop(0, 'rgba(13, 110, 253, 0.5)'); // Blue top
-        gradient.addColorStop(1, 'rgba(13, 110, 253, 0.0)'); // Transparent bottom
+        gradient.addColorStop(0, 'rgba(88, 166, 255, 0.4)');
+        gradient.addColorStop(1, 'rgba(88, 166, 255, 0.0)');
 
         const initialLabels = JSON.parse('{{ chart_labels|safe }}');
         const initialData = JSON.parse('{{ chart_data|safe }}');
@@ -178,49 +230,31 @@
                 datasets: [{
                     label: 'Active Hosts',
                     data: initialData,
-                    borderColor: '#0d6efd',
+                    borderColor: '#58a6ff',
                     backgroundColor: gradient,
                     borderWidth: 2,
-                    tension: 0.4, // Smooth Bezier curve
+                    tension: 0.3,
                     fill: true,
-                    pointRadius: 0, // Clean look, no dots
-                    pointHoverRadius: 6
+                    pointRadius: 0,
+                    pointHoverRadius: 5
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                animation: { duration: 1000 },
                 scales: {
                     y: { 
                         beginAtZero: true, 
-                        grid: { color: '#333', borderDash: [5, 5] },
-                        ticks: { color: '#666', font: { size: 10 } }
+                        grid: { color: '#30363d', borderDash: [4, 4] },
+                        ticks: { color: '#8b949e' }
                     },
-                    x: { 
-                        grid: { display: false },
-                        ticks: { display: false }
-                    }
+                    x: { grid: { display: false }, ticks: { display: false } }
                 },
-                plugins: { 
-                    legend: { display: false },
-                    tooltip: {
-                        mode: 'index',
-                        intersect: false,
-                        backgroundColor: 'rgba(0,0,0,0.8)',
-                        titleColor: '#fff',
-                        bodyColor: '#fff'
-                    }
-                },
-                interaction: {
-                    mode: 'nearest',
-                    axis: 'x',
-                    intersect: false
-                }
+                plugins: { legend: { display: false } }
             }
         });
 
-        // === 2. WEBSOCKET LOGIC ===
+        // === 3. WEBSOCKET LOGIC ===
         const socket = new WebSocket('ws://' + window.location.host + '/ws/dashboard/');
 
         socket.onopen = function(e) {
@@ -232,69 +266,69 @@
             const msg = data.message;
 
             if (msg) {
-                // UI Elements
                 const navBar = document.querySelector('.navbar');
                 const statusBadge = document.getElementById('connectionStatus');
                 const countElement = document.getElementById('activeCount');
-                
-                // --- 1. HANDLE ALERTS (Threat > Anomaly > Normal) ---
-                if (msg.threat_data) {
-                    // CRITICAL THREAT
-                    navBar.className = 'navbar navbar-dark bg-danger mb-4 p-3 animate__animated animate__flash';
-                    statusBadge.className = 'badge bg-black text-danger border border-danger';
-                    statusBadge.innerHTML = `⛔ BLOCKED: ${msg.threat_data.ip}`;
-                    countElement.classList.replace('text-success', 'text-danger');
-                    
-                } else if (msg.is_anomaly) {
-                    // ANOMALY WARNING
-                    navBar.className = 'navbar navbar-dark bg-warning mb-4 p-3';
-                    statusBadge.className = 'badge bg-danger text-white';
-                    statusBadge.innerHTML = '⚠️ ANOMALY DETECTED';
-                    countElement.classList.replace('text-success', 'text-warning');
 
+                // A. Handle Alerts
+                if (msg.threat_data) {
+                    navBar.style.backgroundColor = '#7a1b1b'; // Dark Red
+                    statusBadge.className = 'badge bg-danger text-white animate__animated animate__flash';
+                    statusBadge.innerText = `⛔ THREAT: ${msg.threat_data.ip}`;
+                } else if (msg.is_anomaly) {
+                    navBar.style.backgroundColor = '#7a5c1b'; // Dark Yellow
+                    statusBadge.className = 'badge bg-warning text-dark';
+                    statusBadge.innerText = '⚠️ ANOMALY DETECTED';
                 } else {
-                    // NORMAL STATE
-                    navBar.className = 'navbar navbar-dark mb-4 p-3';
-                    statusBadge.className = 'badge bg-success';
-                    statusBadge.innerHTML = 'System Status: REAL-TIME';
-                    countElement.className = 'display-3 fw-bold text-success';
+                    navBar.style.backgroundColor = '#161b22'; // Default
+                    statusBadge.className = 'badge bg-success bg-opacity-10 text-success border border-success';
+                    statusBadge.innerText = '● SYSTEM ONLINE';
                 }
 
-                // --- 2. UPDATE COUNTER ---
+                // B. Update Data
                 countElement.innerText = msg.count;
 
-                // --- 3. REBUILD TABLE ---
+                // C. Update Table
                 const tableBody = document.getElementById('deviceTableBody');
-                tableBody.innerHTML = ''; 
-
+                tableBody.innerHTML = '';
                 msg.devices.forEach(device => {
                     const row = document.createElement('tr');
-                    row.className = "animate__animated animate__fadeIn"; // Add fade effect to rows
-                    
-                    const vendor = device.vendor || "Unknown";
-                    
+                    row.className = "animate__animated animate__fadeIn";
                     row.innerHTML = `
-                        <td><span class="status-dot status-online"></span> <span class="text-success fw-bold small">UP</span></td>
-                        <td class="tech-font text-white">${device.ip}</td>
-                        <td class="tech-font text-warning">${device.mac}</td>
-                        <td class="vendor-badge">${vendor}</td>
+                        <td><span class="badge bg-success bg-opacity-25 text-success border border-success px-2">UP</span></td>
+                        <td class="mono-font text-white">${device.ip}</td>
+                        <td class="mono-font text-muted">${device.mac}</td>
+                        <td><span class="vendor-badge">${device.vendor||"Unknown"}</span></td>
                         <td class="text-muted small">Just now</td>
                     `;
                     tableBody.appendChild(row);
                 });
 
-                // --- 4. UPDATE GRAPH ---
+                // D. Update Map
+                if (msg.geo_data && msg.geo_data.length > 0) {
+                    mapMarkers.forEach(m => map.removeLayer(m));
+                    mapMarkers = [];
+                    msg.geo_data.forEach(loc => {
+                        const m = L.circleMarker([loc.lat, loc.lon], {
+                            color: '#da3633', // Threat Red
+                            fillColor: '#da3633',
+                            fillOpacity: 0.7,
+                            radius: 8
+                        }).addTo(map);
+                        m.bindPopup(`<b>${loc.ip}</b><br>${loc.city}, ${loc.country}`);
+                        mapMarkers.push(m);
+                    });
+                }
+
+                // E. Update Graph
                 const now = new Date();
-                const timeString = now.getHours() + ":" + now.getMinutes() + ":" + now.getSeconds();
-
-                trafficChart.data.labels.push(timeString);
+                trafficChart.data.labels.push(now.getSeconds());
                 trafficChart.data.datasets[0].data.push(msg.count);
-
                 if (trafficChart.data.labels.length > 20) {
                     trafficChart.data.labels.shift();
                     trafficChart.data.datasets[0].data.shift();
                 }
-                trafficChart.update('none'); // 'none' prevents full re-render animation glitch
+                trafficChart.update('none');
             }
         };
 

@@ -9,6 +9,7 @@ from asgiref.sync import async_to_sync
 from .ml_engine import GhostBrain
 from mac_vendor_lookup import MacLookup, VendorNotFoundError
 from .threat_engine import ThreatHunter
+from .geo_engine import GeoMaster
 
 def get_local_subnet():
     """
@@ -110,6 +111,13 @@ def scan_network():
             if hunter.is_public_ip(dst_ip):
                 foreign_ips.add(dst_ip)
     
+    # === NEW: GEO LOCATION ===
+    geo_locations = []
+    if foreign_ips:
+        geo = GeoMaster()
+        # Convert set to list
+        geo_locations = geo.resolve_ips(list(foreign_ips))
+          
     # [PART 3: THREAT CHECK]
     threat_alert = None
     if foreign_ips:
@@ -155,9 +163,10 @@ def scan_network():
                 "is_anomaly": is_anomaly, # <--- Send the flag
                 "threat_data": threat_alert, # <--- Send Threat Data
                 "count": len(active_devices),
-                "devices": active_devices
+                "devices": active_devices,
+                "geo_data": geo_locations
             }
         }
     )
 
-    return f"Scan Complete. Devices: {len(active_devices)}. Threat: {threat_alert}"
+    return f"Scan Complete. Devices: {len(active_devices)}. Threat: {threat_alert}. Geo-mapped {len(geo_locations)} endpoints."
